@@ -6,24 +6,25 @@ using NAudio.Wave;
 
 namespace MicLevelMonitor
 {
-    public class TrayApp : ApplicationContext
+    public sealed class TrayApp : ApplicationContext
     {
         private readonly NotifyIcon notifyIcon;
         private readonly Timer updateTimer;
         private WaveInEvent waveIn;
-        private float currentLevel = 0;
+        private float currentLevel;
         private const int IconSize = 32;
+        private const int BarCount = 8;
 
         public TrayApp()
         {
             notifyIcon = new NotifyIcon
             {
-                Text = "Mikrofon Monitor - Inicializálás...",
+                Text = "Mikrofon Monitor",
                 Visible = true
             };
 
             var contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add("Kilépés", null, (s, e) => Exit());
+            contextMenu.Items.Add("Kilépés", null, Exit);
             notifyIcon.ContextMenuStrip = contextMenu;
 
             InitializeMicrophone();
@@ -45,10 +46,13 @@ namespace MicLevelMonitor
                     return;
                 }
 
-                waveIn = new WaveInEvent();
-                waveIn.DeviceNumber = 0;
-                waveIn.WaveFormat = new WaveFormat(44100, 1);
-                waveIn.BufferMilliseconds = 50;
+                waveIn = new WaveInEvent
+                {
+                    DeviceNumber = 0,
+                    WaveFormat = new WaveFormat(44100, 1),
+                    BufferMilliseconds = 50
+                };
+
                 waveIn.DataAvailable += OnDataAvailable;
                 waveIn.StartRecording();
 
@@ -76,26 +80,19 @@ namespace MicLevelMonitor
             if (sampleCount > 0)
             {
                 float rms = (float)Math.Sqrt(sum / sampleCount);
-                // Érzékenyebb skála - logaritmikus skálázás és erősítés
                 currentLevel = (float)Math.Min(1.0, Math.Log10(rms * 100 + 1) / 2.0);
             }
         }
 
         private void UpdateIcon(object sender, EventArgs e)
         {
-            float level = currentLevel;
             bool hasValidLevel = waveIn != null;
 
-            if (hasValidLevel)
-            {
-                notifyIcon.Text = $"Mikrofon: {level * 100:F1}%";
-            }
-            else
-            {
-                notifyIcon.Text = "Mikrofon: Nincs kapcsolat";
-            }
+            notifyIcon.Text = hasValidLevel
+                ? $"Mikrofon: {currentLevel * 100:F1}%"
+                : "Mikrofon: Nincs kapcsolat";
 
-            GenerateIcon(level, hasValidLevel);
+            GenerateIcon(currentLevel, hasValidLevel);
         }
 
         private void GenerateIcon(float level, bool hasValidLevel)
@@ -117,38 +114,7 @@ namespace MicLevelMonitor
             }
             else
             {
-                // 8 sávos megjelenítés érzékenyebb skálával
-                int bars = Math.Min(8, (int)(level * 12)); // Érzékenyebb skála
-
-                const int barCount = 8;
-                const int spacing = 1;
-                const int margin = 3;
-
-                int availableHeight = IconSize - 2 * margin;
-                int barHeight = (availableHeight - (barCount - 1) * spacing) / barCount;
-                int barWidth = IconSize - 2 * margin;
-                int x = margin;
-
-                for (int i = 0; i < barCount; i++)
-                {
-                    int y = IconSize - margin - (i + 1) * (barHeight + spacing) + spacing;
-
-                    Color color;
-                    if (i < bars)
-                    {
-                        // Színátmenet: 0-2 zöld, 3-5 sárga, 6-7 piros
-                        if (i <= 2) color = Color.Lime;
-                        else if (i <= 5) color = Color.Gold;
-                        else color = Color.Red;
-                    }
-                    else
-                    {
-                        color = Color.FromArgb(50, Color.LightGray);
-                    }
-
-                    using var brush = new SolidBrush(color);
-                    g.FillRectangle(brush, x, y, barWidth, barHeight);
-                }
+                DrawLevelBars(g, level);
             }
 
             IntPtr hIcon = bmp.GetHicon();
@@ -162,7 +128,39 @@ namespace MicLevelMonitor
             }
         }
 
-        private void Exit()
+        private void DrawLevelBars(Graphics g, float level)
+        {
+            int bars = Math.Min(BarCount, (int)(level * 12));
+            const int spacing = 1;
+            const int margin = 3;
+
+            int availableHeight = IconSize - 2 * margin;
+            int barHeight = (availableHeight - (BarCount - 1) * spacing) / BarCount;
+            int barWidth = IconSize - 2 * margin;
+            int x = margin;
+
+            for (int i = 0; i < BarCount; i++)
+            {
+                int y = IconSize - margin - (i + 1) * (barHeight + spacing) + spacing;
+
+                Color color = i < bars ? GetBarColor(i) : Color.FromArgb(50, Color.LightGray);
+
+                using var brush = new SolidBrush(color);
+                g.FillRectangle(brush, x, y, barWidth, barHeight);
+            }
+        }
+
+        private static Color GetBarColor(int barIndex)
+        {
+            return barIndex switch
+            {
+                <= 2 => Color.Lime,
+                <= 5 => Color.Gold,
+                _ => Color.Red
+            };
+        }
+
+        private void Exit(object sender, EventArgs e)
         {
             waveIn?.StopRecording();
             waveIn?.Dispose();

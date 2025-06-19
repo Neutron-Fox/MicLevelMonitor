@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MicLevelMonitor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+379f2dd5c4e3d59eed6bc9946c4dddaf17df136e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0209b7a8b06ac6e8bea920599740a62fa9e0b633")]
 [assembly: System.Reflection.AssemblyProductAttribute("MicLevelMonitor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MicLevelMonitor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

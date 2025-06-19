@@ -10,10 +10,16 @@ namespace MicLevelMonitor
     {
         private readonly NotifyIcon notifyIcon;
         private readonly Timer updateTimer;
+        private readonly Timer memoryCleanupTimer;
         private WaveInEvent waveIn;
         private float currentLevel;
         private const int IconSize = 32;
         private const int BarCount = 8;
+
+        // Memória optimalizálás
+        private Icon currentIcon;
+        private int updateCounter = 0;
+        private const int GC_COLLECT_INTERVAL = 100; // 10 másodpercenként (100 * 100ms)
 
         public TrayApp()
         {
@@ -29,9 +35,15 @@ namespace MicLevelMonitor
 
             InitializeMicrophone();
 
+            // Fő update timer
             updateTimer = new Timer { Interval = 100 };
             updateTimer.Tick += UpdateIcon;
             updateTimer.Start();
+
+            // Memória cleanup timer - ritkábban fut
+            memoryCleanupTimer = new Timer { Interval = 5000 }; // 5 másodpercenként
+            memoryCleanupTimer.Tick += (s, e) => ForceMemoryCleanup();
+            memoryCleanupTimer.Start();
 
             UpdateIcon(null, null);
         }
@@ -80,7 +92,7 @@ namespace MicLevelMonitor
             if (sampleCount > 0)
             {
                 float rms = (float)Math.Sqrt(sum / sampleCount);
-                currentLevel = (float)Math.Min(1.0, Math.Log10(rms * 100 + 1) / 2.0);
+                currentLevel = Math.Min(1.0f, (float)(Math.Log10(rms * 100 + 1) / 2.0));
             }
         }
 
@@ -93,38 +105,70 @@ namespace MicLevelMonitor
                 : "Mikrofon: Nincs kapcsolat";
 
             GenerateIcon(currentLevel, hasValidLevel);
+
+            // Periodikus memória cleanup
+            updateCounter++;
+            if (updateCounter >= GC_COLLECT_INTERVAL)
+            {
+                updateCounter = 0;
+                ForceMemoryCleanup();
+            }
         }
 
         private void GenerateIcon(float level, bool hasValidLevel)
         {
-            using var bmp = new Bitmap(IconSize, IconSize);
-            using var g = Graphics.FromImage(bmp);
-
-            g.Clear(Color.Transparent);
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-            Color frameColor = hasValidLevel ? Color.Gray : Color.Red;
-            using var pen = new Pen(frameColor, 2);
-            g.DrawRectangle(pen, 1, 1, IconSize - 3, IconSize - 3);
-
-            if (!hasValidLevel)
+            // Előző icon felszabadítása
+            if (currentIcon != null)
             {
-                g.DrawLine(pen, 4, 4, IconSize - 4, IconSize - 4);
-                g.DrawLine(pen, IconSize - 4, 4, 4, IconSize - 4);
-            }
-            else
-            {
-                DrawLevelBars(g, level);
+                currentIcon.Dispose();
+                currentIcon = null;
             }
 
-            IntPtr hIcon = bmp.GetHicon();
-            try
+            // Bitmap és Graphics using-ban a proper dispose-ért
+            using (var bmp = new Bitmap(IconSize, IconSize))
             {
-                notifyIcon.Icon = Icon.FromHandle(hIcon);
-            }
-            finally
-            {
-                DestroyIcon(hIcon);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.Clear(Color.Transparent);
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                    Color frameColor = hasValidLevel ? Color.Gray : Color.Red;
+                    using (var pen = new Pen(frameColor, 2))
+                    {
+                        g.DrawRectangle(pen, 1, 1, IconSize - 3, IconSize - 3);
+
+                        if (!hasValidLevel)
+                        {
+                            g.DrawLine(pen, 4, 4, IconSize - 4, IconSize - 4);
+                            g.DrawLine(pen, IconSize - 4, 4, 4, IconSize - 4);
+                        }
+                        else
+                        {
+                            DrawLevelBars(g, level);
+                        }
+                    }
+                }
+
+                // Icon létrehozása és beállítása
+                IntPtr hIcon = bmp.GetHicon();
+                try
+                {
+                    currentIcon = Icon.FromHandle(hIcon);
+                    notifyIcon.Icon = currentIcon;
+                }
+                catch
+                {
+                    // Ha valami hiba van, destroy-oljuk az icon handle-t
+                    DestroyIcon(hIcon);
+                }
+                finally
+                {
+                    // A handle-t mindenképpen destroy-olni kell
+                    if (hIcon != IntPtr.Zero)
+                    {
+                        DestroyIcon(hIcon);
+                    }
+                }
             }
         }
 
@@ -145,8 +189,10 @@ namespace MicLevelMonitor
 
                 Color color = i < bars ? GetBarColor(i) : Color.FromArgb(50, Color.LightGray);
 
-                using var brush = new SolidBrush(color);
-                g.FillRectangle(brush, x, y, barWidth, barHeight);
+                using (var brush = new SolidBrush(color))
+                {
+                    g.FillRectangle(brush, x, y, barWidth, barHeight);
+                }
             }
         }
 
@@ -160,14 +206,43 @@ namespace MicLevelMonitor
             };
         }
 
+        private void ForceMemoryCleanup()
+        {
+            // Explicit garbage collection
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            // Memória kompakció (ritkán használandó)
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+        }
+
         private void Exit(object sender, EventArgs e)
         {
+            // Összes resource felszabadítása
             waveIn?.StopRecording();
             waveIn?.Dispose();
+            waveIn = null;
+
             updateTimer?.Stop();
             updateTimer?.Dispose();
+
+            memoryCleanupTimer?.Stop();
+            memoryCleanupTimer?.Dispose();
+
+            // Icon felszabadítása
+            if (currentIcon != null)
+            {
+                currentIcon.Dispose();
+                currentIcon = null;
+            }
+
             notifyIcon.Visible = false;
             notifyIcon.Dispose();
+
+            // Végső memória cleanup
+            ForceMemoryCleanup();
+
             Application.Exit();
         }
 

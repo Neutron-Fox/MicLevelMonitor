@@ -10,8 +10,6 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
   

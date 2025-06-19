@@ -4,16 +4,62 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>images.ico</ApplicationIcon>
+    
+    <!-- Self-contained deployment beállítások -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
+    <!-- Méret optimalizálás -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
+    <TrimMode>partial</TrimMode>
+    <PublishTrimmed>false</PublishTrimmed>
+    
+    <!-- Debug információk eltávolítása -->
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+    
+    <!-- Nem használt assembly-k kizárása -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
+    
+    <!-- Globalizáció optimalizálás -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    
+    <!-- Reflection és egyéb optimalizálások -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <IlcDisableReflection>false</IlcDisableReflection>
+    
+    <!-- Figyelmeztetések elnyomása -->
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <NoWarn>$(NoWarn);IL2026;IL2104</NoWarn>
   </PropertyGroup>
+
+  <!-- Csak a szükséges Windows Forms komponensek -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
   
+  <!-- NAudio package -->
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
+
+  <!-- Nem szükséges fájlok kizárása -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
+    <RuntimeHostConfigurationOption Include="System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization" Value="false" />
+  </ItemGroup>
+
+  <!-- Explicit assembly referenciák kizárása a méret csökkentésére -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.Windows.Forms" />
+    <TrimmerRootAssembly Include="System.Drawing" />
+    <TrimmerRootAssembly Include="NAudio" />
+  </ItemGroup>
+
 </Project>

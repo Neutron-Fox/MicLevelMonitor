@@ -35,7 +35,6 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <EventSourceSupport>false</EventSourceSupport>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
-    <EnableUnsafeSupport>true</EnableUnsafeSupport>
     
     <!-- Figyelmeztetések elnyomása -->
     <NoWarn>$(NoWarn);IL2026;IL2104</NoWarn>

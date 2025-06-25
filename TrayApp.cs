@@ -88,21 +88,15 @@ namespace MicLevelMonitor
 
         private void OnDataAvailable(object sender, WaveInEventArgs e)
         {
-            // Gyors RMS számítás
+            // Biztonságos RMS számítás
             float sum = 0;
             int sampleCount = e.BytesRecorded / 2;
 
-            unsafe
+            for (int i = 0; i < e.BytesRecorded; i += 2)
             {
-                fixed (byte* buffer = e.Buffer)
-                {
-                    short* samples = (short*)buffer;
-                    for (int i = 0; i < sampleCount; i++)
-                    {
-                        float sample = samples[i] / 32768f;
-                        sum += sample * sample;
-                    }
-                }
+                short sample = (short)((e.Buffer[i + 1] << 8) | e.Buffer[i]);
+                float sampleValue = sample / 32768f;
+                sum += sampleValue * sampleValue;
             }
 
             if (sampleCount > 0)

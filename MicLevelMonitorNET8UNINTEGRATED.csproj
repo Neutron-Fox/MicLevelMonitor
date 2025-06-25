@@ -25,7 +25,6 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <EventSourceSupport>false</EventSourceSupport>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
-    <EnableUnsafeSupport>true</EnableUnsafeSupport>
   </PropertyGroup>
 
   <!-- Framework referenciák -->

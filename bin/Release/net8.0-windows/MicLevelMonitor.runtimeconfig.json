@@ -1,0 +1,30 @@
+{
+  "runtimeOptions": {
+    "tfm": "net8.0",
+    "frameworks": [
+      {
+        "name": "Microsoft.NETCore.App",
+        "version": "8.0.0"
+      },
+      {
+        "name": "Microsoft.WindowsDesktop.App",
+        "version": "8.0.0"
+      }
+    ],
+    "configProperties": {
+      "System.Globalization.Invariant": true,
+      "System.Diagnostics.Tracing.EventSource.IsSupported": false,
+      "System.Threading.Thread.EnableAutoreleasePool": false,
+      "System.GC.Concurrent": true,
+      "System.GC.Server": false,
+      "System.GC.RetainVM": false,
+      "System.Globalization.PredefinedCulturesOnly": true,
+      "System.Reflection.Metadata.MetadataUpdater.IsSupported": false,
+      "System.Resources.UseSystemResourceKeys": true,
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true,
+      "System.Runtime.TieredCompilation": true,
+      "System.Runtime.TieredCompilation.QuickJit": true,
+      "CSWINRT_USE_WINDOWS_UI_XAML_PROJECTIONS": false
+    }
+  }
+}

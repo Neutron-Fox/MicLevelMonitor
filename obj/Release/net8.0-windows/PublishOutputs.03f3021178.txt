@@ -1,0 +1,11 @@
+C:\MicLevelMonitorNET8UnIntegrated\MicLevelMonitor.exe
+C:\MicLevelMonitorNET8UnIntegrated\MicLevelMonitor.dll
+C:\MicLevelMonitorNET8UnIntegrated\MicLevelMonitor.deps.json
+C:\MicLevelMonitorNET8UnIntegrated\MicLevelMonitor.runtimeconfig.json
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.dll
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.Asio.dll
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.Core.dll
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.Midi.dll
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.Wasapi.dll
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.WinForms.dll
+C:\MicLevelMonitorNET8UnIntegrated\NAudio.WinMM.dll

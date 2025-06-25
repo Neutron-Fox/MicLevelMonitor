@@ -10,13 +10,17 @@ namespace MicLevelMonitor
     {
         private readonly NotifyIcon notifyIcon;
         private readonly Timer updateTimer;
+        private readonly Timer memoryCleanupTimer;
+        private readonly Timer startupDelayTimer;
         private WaveInEvent waveIn;
         private float currentLevel;
+        private bool isInitialized = false;
 
         // Konstansok
         private const int IconSize = 32;
         private const int BarCount = 8;
         private const int UpdateInterval = 100; // ms
+        private const int MemoryCleanupInterval = 30000; // 30 másodperc
 
         // Statikus színek - nem kell minden alkalommal újra létrehozni
         private static readonly Color[] BarColors = { Color.Lime, Color.Lime, Color.Lime, Color.Gold, Color.Gold, Color.Gold, Color.Red, Color.Red };
@@ -29,24 +33,60 @@ namespace MicLevelMonitor
 
         public TrayApp()
         {
-            // Tray icon inicializálás
+            // Azonnal látható tray icon - gyors feedback
             notifyIcon = new NotifyIcon
             {
-                Text = "Mikrofon Monitor",
+                Text = "Mikrofon Monitor - Inicializálás...",
                 Visible = true,
                 ContextMenuStrip = CreateContextMenu()
             };
 
+            // Alapértelmezett icon azonnal
+            GenerateIcon(0, false);
+
+            // Timer inicializálás a konstruktorban
+            updateTimer = new Timer { Interval = UpdateInterval };
+            updateTimer.Tick += UpdateIcon;
+
+            memoryCleanupTimer = new Timer { Interval = MemoryCleanupInterval };
+            memoryCleanupTimer.Tick += (s, e) => PerformMemoryCleanup();
+
+            // Késleltetett inicializálás a gyors startup-ért
+            startupDelayTimer = new Timer { Interval = 500 }; // 500ms késleltetés
+            startupDelayTimer.Tick += (s, e) => {
+                startupDelayTimer.Stop();
+                startupDelayTimer.Dispose();
+                InitializeDelayed();
+            };
+            startupDelayTimer.Start();
+        }
+
+        private void InitializeDelayed()
+        {
             // Mikrofon inicializálás
             InitializeMicrophone();
 
-            // Timer inicializálás - csak egy timer
-            updateTimer = new Timer { Interval = UpdateInterval };
-            updateTimer.Tick += UpdateIcon;
+            // Timer indítás
             updateTimer.Start();
+            memoryCleanupTimer.Start();
 
-            // Első icon generálás
-            UpdateIcon(null, null);
+            isInitialized = true;
+
+            // Session change kezelés
+            Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionChange;
+        }
+
+        private void OnSessionChange(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
+        {
+            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock ||
+                e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLogon)
+            {
+                // Session unlock/logon után újra inicializálás
+                if (isInitialized && waveIn == null)
+                {
+                    InitializeMicrophone();
+                }
+            }
         }
 
         private ContextMenuStrip CreateContextMenu()
@@ -60,6 +100,14 @@ namespace MicLevelMonitor
         {
             try
             {
+                // Ha már létezik, dispose előbb
+                if (waveIn != null)
+                {
+                    waveIn.StopRecording();
+                    waveIn.Dispose();
+                    waveIn = null;
+                }
+
                 if (WaveIn.DeviceCount == 0)
                 {
                     notifyIcon.Text = "Nincs mikrofon";
@@ -76,13 +124,30 @@ namespace MicLevelMonitor
                 waveIn.DataAvailable += OnDataAvailable;
                 waveIn.StartRecording();
 
-                // Eszköz név lekérése
                 var deviceCaps = WaveIn.GetCapabilities(0);
                 notifyIcon.Text = $"Mikrofon: {deviceCaps.ProductName}";
             }
             catch (Exception ex)
             {
                 notifyIcon.Text = $"Hiba: {ex.Message}";
+                // Retry timer - próbálja újra 5 másodperc múlva
+                var retryTimer = new Timer { Interval = 5000 };
+                retryTimer.Tick += (s, e) => {
+                    retryTimer.Stop();
+                    retryTimer.Dispose();
+                    if (isInitialized) InitializeMicrophone();
+                };
+                retryTimer.Start();
+            }
+        }
+
+        private void PerformMemoryCleanup()
+        {
+            // Óvatos memória cleanup - csak ha szükséges
+            if (GC.GetTotalMemory(false) > 10 * 1024 * 1024) // 10MB felett
+            {
+                GC.Collect(0, GCCollectionMode.Optimized);
+                GC.WaitForPendingFinalizers();
             }
         }
 
@@ -187,9 +252,18 @@ namespace MicLevelMonitor
 
         private void Exit(object sender, EventArgs e)
         {
+            // Session events cleanup
+            Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionChange;
+
             // Cleanup
+            startupDelayTimer?.Stop();
+            startupDelayTimer?.Dispose();
+
             updateTimer?.Stop();
             updateTimer?.Dispose();
+
+            memoryCleanupTimer?.Stop();
+            memoryCleanupTimer?.Dispose();
 
             waveIn?.StopRecording();
             waveIn?.Dispose();

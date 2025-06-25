@@ -4,14 +4,44 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>images.ico</ApplicationIcon>
-    <PublishSingleFile>true</PublishSingleFile>
+    
+    <!-- Framework-dependent deployment -->
     <SelfContained>false</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>false</PublishSingleFile>
+    
+    <!-- Optimalizálás -->
+    <Optimize>true</Optimize>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    
+    <!-- Startup és memória optimalizálás -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    
+    <!-- Egyszerűsített beállítások -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <EnableUnsafeSupport>true</EnableUnsafeSupport>
   </PropertyGroup>
+
+  <!-- Framework referenciák -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
   
+  <!-- NAudio package -->
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+  <!-- Runtime optimalizálások -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
+    <RuntimeHostConfigurationOption Include="System.Diagnostics.Tracing.EventSource.IsSupported" Value="false" />
+    <RuntimeHostConfigurationOption Include="System.Threading.Thread.EnableAutoreleasePool" Value="false" />
   </ItemGroup>
 </Project>

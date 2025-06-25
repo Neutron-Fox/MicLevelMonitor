@@ -6,24 +6,35 @@ namespace MicLevelMonitor
 {
     internal static class Program
     {
+        private const string MutexName = "MicLevelMonitor_SingleInstance";
+
         [STAThread]
         static void Main()
         {
-            // Mutex létrehozása a dupla futás megakadályozására
-            using (var mutex = new Mutex(true, "MicLevelMonitor_SingleInstance", out bool createdNew))
+            // Alkalmazás beállítások - startup optimalizálás
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            // Mutex single instance check
+            using (var mutex = new Mutex(true, MutexName, out bool createdNew))
             {
                 if (createdNew)
                 {
-                    Application.EnableVisualStyles();
-                    Application.SetCompatibleTextRenderingDefault(false);
-                    Application.Run(new TrayApp());
+                    try
+                    {
+                        // Memória optimalizálás startup-kor
+                        GC.Collect(0, GCCollectionMode.Optimized);
+
+                        Application.Run(new TrayApp());
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Alkalmazás hiba: {ex.Message}", "Hiba",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
-                else
-                {
-                    // Ha már fut, ne indítson újat
-                    MessageBox.Show("A Mikrofon Monitor már fut!", "Figyelmeztetés",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                // Ha már fut, csendes kilépés (nincs MessageBox)
             }
         }
     }

@@ -5,41 +5,43 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>images.ico</ApplicationIcon>
     
-    <!-- Self-contained deployment beállítások -->
+    <!-- Self-contained deployment optimalizálás -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     
-    <!-- Méret optimalizálás -->
+    <!-- Méret optimalizálás trimming nélkül -->
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
-    <TrimMode>partial</TrimMode>
     <PublishTrimmed>false</PublishTrimmed>
     
-    <!-- Debug információk eltávolítása -->
+    <!-- Teljesítmény optimalizálás -->
+    <Optimize>true</Optimize>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
-    <Optimize>true</Optimize>
-    
-    <!-- Nem használt assembly-k kizárása -->
     <PublishReadyToRun>false</PublishReadyToRun>
-    <PublishReadyToRunShowWarnings>false</PublishReadyToRunShowWarnings>
     
-    <!-- Globalizáció optimalizálás -->
+    <!-- Startup optimalizálás -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+    
+    <!-- Memória optimalizálás -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    
+    <!-- Globalizáció és egyéb optimalizálások -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    
-    <!-- Reflection és egyéb optimalizálások -->
     <EventSourceSupport>false</EventSourceSupport>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
-    <IlcDisableReflection>false</IlcDisableReflection>
+    <EnableUnsafeSupport>true</EnableUnsafeSupport>
     
     <!-- Figyelmeztetések elnyomása -->
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
     <NoWarn>$(NoWarn);IL2026;IL2104</NoWarn>
   </PropertyGroup>
 
-  <!-- Csak a szükséges Windows Forms komponensek -->
+  <!-- Csak szükséges framework referenciák -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
@@ -48,18 +50,11 @@
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
-
-  <!-- Nem szükséges fájlok kizárása -->
+  <!-- Runtime konfigurációs optimalizálások -->
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <RuntimeHostConfigurationOption Include="System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization" Value="false" />
-  </ItemGroup>
-
-  <!-- Explicit assembly referenciák kizárása a méret csökkentésére -->
-  <ItemGroup>
-    <TrimmerRootAssembly Include="System.Windows.Forms" />
-    <TrimmerRootAssembly Include="System.Drawing" />
-    <TrimmerRootAssembly Include="NAudio" />
+    <RuntimeHostConfigurationOption Include="System.Threading.Thread.EnableAutoreleasePool" Value="false" />
   </ItemGroup>
 
 </Project>

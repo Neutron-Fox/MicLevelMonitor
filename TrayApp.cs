@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using NAudio.Wave;
+using NAudio.CoreAudioApi;
 
 namespace MicLevelMonitor
 {
@@ -11,269 +11,165 @@ namespace MicLevelMonitor
         private readonly NotifyIcon notifyIcon;
         private readonly Timer updateTimer;
         private readonly Timer memoryCleanupTimer;
-        private readonly Timer startupDelayTimer;
-        private WaveInEvent waveIn;
-        private float currentLevel;
-        private bool isInitialized = false;
-
-        // Konstansok
+        private readonly MMDeviceEnumerator deviceEnumerator;
+        private MMDevice micDevice;
+        private bool isMonitoring;
         private const int IconSize = 32;
         private const int BarCount = 8;
-        private const int UpdateInterval = 100; // ms
-        private const int MemoryCleanupInterval = 30000; // 30 másodperc
-
-        // Statikus színek - nem kell minden alkalommal újra létrehozni
-        private static readonly Color[] BarColors = { Color.Lime, Color.Lime, Color.Lime, Color.Gold, Color.Gold, Color.Gold, Color.Red, Color.Red };
-        private static readonly Color InactiveBarColor = Color.FromArgb(50, Color.LightGray);
-        private static readonly Color FrameColor = Color.Gray;
-        private static readonly Color ErrorColor = Color.Red;
-
-        // Egyetlen icon instance
-        private Icon currentIcon;
+        
+        // Színséma - statikus, nem kell minden frissítésnél létrehozni
+        private static readonly Color[] BarColors = {
+            Color.FromArgb(0, 255, 0),     // Zöld (1-3)
+            Color.FromArgb(0, 255, 0),
+            Color.FromArgb(0, 255, 0),
+            Color.FromArgb(255, 255, 0),   // Sárga (4-6)
+            Color.FromArgb(255, 255, 0),
+            Color.FromArgb(255, 255, 0),
+            Color.FromArgb(255, 0, 0),     // Piros (7-8)
+            Color.FromArgb(255, 0, 0)
+        };
 
         public TrayApp()
         {
-            // Azonnal látható tray icon - gyors feedback
+            // Tálcaikon inicializálása
             notifyIcon = new NotifyIcon
             {
-                Text = "Mikrofon Monitor - Inicializálás...",
+                Text = "Mikrofon hangerő monitor",
                 Visible = true,
-                ContextMenuStrip = CreateContextMenu()
+                ContextMenuStrip = new ContextMenuStrip()
             };
+            notifyIcon.ContextMenuStrip.Items.Add("Kilépés", null, (s, e) => Exit());
 
-            // Alapértelmezett icon azonnal
-            GenerateIcon(0, false);
-
-            // Timer inicializálás a konstruktorban
-            updateTimer = new Timer { Interval = UpdateInterval };
-            updateTimer.Tick += UpdateIcon;
-
-            memoryCleanupTimer = new Timer { Interval = MemoryCleanupInterval };
-            memoryCleanupTimer.Tick += (s, e) => PerformMemoryCleanup();
-
-            // Késleltetett inicializálás a gyors startup-ért
-            startupDelayTimer = new Timer { Interval = 500 }; // 500ms késleltetés
-            startupDelayTimer.Tick += (s, e) => {
-                startupDelayTimer.Stop();
-                startupDelayTimer.Dispose();
-                InitializeDelayed();
-            };
-            startupDelayTimer.Start();
-        }
-
-        private void InitializeDelayed()
-        {
-            // Mikrofon inicializálás
+            // Audio eszköz inicializálása
+            deviceEnumerator = new MMDeviceEnumerator();
             InitializeMicrophone();
 
-            // Timer indítás
+            // Időzítők beállítása
+            updateTimer = new Timer { Interval = 50 };  // 20 FPS
+            updateTimer.Tick += UpdateVolume;
+            
+            memoryCleanupTimer = new Timer { Interval = 30000 }; // 30 másodperc
+            memoryCleanupTimer.Tick += (s, e) => GC.Collect(0, GCCollectionMode.Optimized);
+
+            // Időzítők indítása
             updateTimer.Start();
             memoryCleanupTimer.Start();
-
-            isInitialized = true;
-
-            // Session change kezelés
-            Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionChange;
-        }
-
-        private void OnSessionChange(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
-        {
-            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock ||
-                e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLogon)
-            {
-                // Session unlock/logon után újra inicializálás
-                if (isInitialized && waveIn == null)
-                {
-                    InitializeMicrophone();
-                }
-            }
-        }
-
-        private ContextMenuStrip CreateContextMenu()
-        {
-            var contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add("Kilépés", null, Exit);
-            return contextMenu;
         }
 
         private void InitializeMicrophone()
         {
             try
             {
-                // Ha már létezik, dispose előbb
-                if (waveIn != null)
+                if (micDevice != null)
                 {
-                    waveIn.StopRecording();
-                    waveIn.Dispose();
-                    waveIn = null;
+                    micDevice.Dispose();
+                    micDevice = null;
                 }
 
-                if (WaveIn.DeviceCount == 0)
-                {
-                    notifyIcon.Text = "Nincs mikrofon";
-                    return;
-                }
-
-                waveIn = new WaveInEvent
-                {
-                    DeviceNumber = 0,
-                    WaveFormat = new WaveFormat(44100, 1),
-                    BufferMilliseconds = 50
-                };
-
-                waveIn.DataAvailable += OnDataAvailable;
-                waveIn.StartRecording();
-
-                var deviceCaps = WaveIn.GetCapabilities(0);
-                notifyIcon.Text = $"Mikrofon: {deviceCaps.ProductName}";
+                // Próbáljuk először a kommunikációs mikrofont
+                micDevice = deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+                isMonitoring = true;
+                notifyIcon.Text = $"Mikrofon: {micDevice.FriendlyName}";
             }
-            catch (Exception ex)
+            catch
             {
-                notifyIcon.Text = $"Hiba: {ex.Message}";
-                // Retry timer - próbálja újra 5 másodperc múlva
-                var retryTimer = new Timer { Interval = 5000 };
-                retryTimer.Tick += (s, e) => {
-                    retryTimer.Stop();
-                    retryTimer.Dispose();
-                    if (isInitialized) InitializeMicrophone();
-                };
-                retryTimer.Start();
-            }
-        }
-
-        private void PerformMemoryCleanup()
-        {
-            // Óvatos memória cleanup - csak ha szükséges
-            if (GC.GetTotalMemory(false) > 10 * 1024 * 1024) // 10MB felett
-            {
-                GC.Collect(0, GCCollectionMode.Optimized);
-                GC.WaitForPendingFinalizers();
-            }
-        }
-
-        private void OnDataAvailable(object sender, WaveInEventArgs e)
-        {
-            // Biztonságos RMS számítás
-            float sum = 0;
-            int sampleCount = e.BytesRecorded / 2;
-
-            for (int i = 0; i < e.BytesRecorded; i += 2)
-            {
-                short sample = (short)((e.Buffer[i + 1] << 8) | e.Buffer[i]);
-                float sampleValue = sample / 32768f;
-                sum += sampleValue * sampleValue;
-            }
-
-            if (sampleCount > 0)
-            {
-                float rms = (float)Math.Sqrt(sum / sampleCount);
-                currentLevel = Math.Min(1.0f, (float)(Math.Log10(rms * 100 + 1) / 2.0));
-            }
-        }
-
-        private void UpdateIcon(object sender, EventArgs e)
-        {
-            bool hasValidLevel = waveIn != null;
-
-            // Tooltip frissítés
-            notifyIcon.Text = hasValidLevel
-                ? $"Mikrofon: {currentLevel * 100:F1}%"
-                : "Mikrofon: Nincs kapcsolat";
-
-            // Icon generálás
-            GenerateIcon(currentLevel, hasValidLevel);
-        }
-
-        private void GenerateIcon(float level, bool hasValidLevel)
-        {
-            // Előző icon dispose
-            currentIcon?.Dispose();
-
-            using (var bmp = new Bitmap(IconSize, IconSize))
-            using (var g = Graphics.FromImage(bmp))
-            {
-                g.Clear(Color.Transparent);
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None; // Gyorsabb
-
-                // Keret rajzolás
-                Color frameColor = hasValidLevel ? FrameColor : ErrorColor;
-                using (var pen = new Pen(frameColor, 2))
-                {
-                    g.DrawRectangle(pen, 1, 1, IconSize - 3, IconSize - 3);
-
-                    if (!hasValidLevel)
-                    {
-                        // X rajzolás hiba esetén
-                        g.DrawLine(pen, 4, 4, IconSize - 4, IconSize - 4);
-                        g.DrawLine(pen, IconSize - 4, 4, 4, IconSize - 4);
-                    }
-                    else
-                    {
-                        DrawLevelBars(g, level);
-                    }
-                }
-
-                // Icon létrehozás
-                IntPtr hIcon = bmp.GetHicon();
                 try
                 {
-                    currentIcon = Icon.FromHandle(hIcon);
-                    notifyIcon.Icon = currentIcon;
+                    // Ha az nem megy, akkor a multimédia mikrofont
+                    micDevice = deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
+                    isMonitoring = true;
+                    notifyIcon.Text = $"Mikrofon: {micDevice.FriendlyName}";
                 }
-                finally
+                catch (Exception)
                 {
-                    // Handle destroy
-                    DestroyIcon(hIcon);
+                    isMonitoring = false;
+                    notifyIcon.Text = "Nincs elérhető mikrofon";
                 }
             }
         }
 
-        private void DrawLevelBars(Graphics g, float level)
+        private void UpdateVolume(object sender, EventArgs e)
         {
-            int activeBars = Math.Min(BarCount, (int)(level * BarCount * 1.5f));
+            if (!isMonitoring || micDevice?.AudioMeterInformation == null) return;
 
-            const int margin = 3;
-            const int spacing = 1;
-            int availableHeight = IconSize - 2 * margin;
-            int barHeight = (availableHeight - (BarCount - 1) * spacing) / BarCount;
+            try
+            {
+                // Hangerő lekérése (0.0 - 1.0)
+                float level = micDevice.AudioMeterInformation.MasterPeakValue;
+                
+                // Százalékos érték számítása
+                int volumePercent = (int)(level * 100);
+                
+                // Aktív sávok számítása (0-8)
+                int activeBars = Math.Min(BarCount, (volumePercent * BarCount) / 100);
+                
+                DrawTrayIcon(activeBars);
+                notifyIcon.Text = $"Mikrofon: {volumePercent}%";
+            }
+            catch
+            {
+                // Ha hiba van, próbáljuk újrainicializálni
+                isMonitoring = false;
+                InitializeMicrophone();
+            }
+        }
+
+        private void DrawTrayIcon(int activeBars)
+        {
+            using var bmp = new Bitmap(IconSize, IconSize);
+            using var g = Graphics.FromImage(bmp);
+            
+            // Háttér
+            g.Clear(Color.Black);
+            
+            // Rajzolási paraméterek
+            int margin = 3;
+            int spacing = 1;
             int barWidth = IconSize - 2 * margin;
+            int barHeight = (IconSize - 2 * margin - (BarCount - 1) * spacing) / BarCount;
 
+            // Sávok rajzolása
             for (int i = 0; i < BarCount; i++)
             {
-                int y = IconSize - margin - (i + 1) * (barHeight + spacing) + spacing;
-                Color color = i < activeBars ? BarColors[i] : InactiveBarColor;
-
-                using (var brush = new SolidBrush(color))
-                {
-                    g.FillRectangle(brush, margin, y, barWidth, barHeight);
-                }
+                int y = IconSize - margin - (i + 1) * barHeight - i * spacing;
+                using var brush = new SolidBrush(i < activeBars ? BarColors[i] : Color.DimGray);
+                g.FillRectangle(brush, margin, y, barWidth, barHeight);
             }
+
+            // Keret
+            using var framePen = new Pen(Color.White, 1);
+            g.DrawRectangle(framePen, 0, 0, IconSize - 1, IconSize - 1);
+
+            // Icon frissítése
+            notifyIcon.Icon?.Dispose();
+            IntPtr hIcon = bmp.GetHicon();
+            notifyIcon.Icon = Icon.FromHandle(hIcon);
+            DestroyIcon(hIcon);
         }
 
-        private void Exit(object sender, EventArgs e)
+        private void Exit()
         {
-            // Session events cleanup
-            Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionChange;
-
-            // Cleanup
-            startupDelayTimer?.Stop();
-            startupDelayTimer?.Dispose();
-
             updateTimer?.Stop();
-            updateTimer?.Dispose();
-
             memoryCleanupTimer?.Stop();
-            memoryCleanupTimer?.Dispose();
-
-            waveIn?.StopRecording();
-            waveIn?.Dispose();
-
-            currentIcon?.Dispose();
-
-            notifyIcon.Visible = false;
-            notifyIcon.Dispose();
-
+            Dispose();
             Application.Exit();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                updateTimer?.Stop();
+                updateTimer?.Dispose();
+                memoryCleanupTimer?.Stop();
+                memoryCleanupTimer?.Dispose();
+                micDevice?.Dispose();
+                deviceEnumerator?.Dispose();
+                notifyIcon?.Icon?.Dispose();
+                notifyIcon?.Dispose();
+                GC.Collect(0, GCCollectionMode.Optimized);
+            }
+            base.Dispose(disposing);
         }
 
         [DllImport("user32.dll")]

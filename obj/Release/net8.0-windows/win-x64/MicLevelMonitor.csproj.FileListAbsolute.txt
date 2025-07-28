@@ -248,7 +248,6 @@ C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\hostfxr.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\hostpolicy.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\mscordaccore.dll
-C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\mscordaccore_amd64_amd64_8.0.1725.26602.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\mscordbi.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\mscorrc.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\msquic.dll
@@ -478,3 +477,5 @@ C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\zh-Hant\UIAutomationTypes.resources.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\zh-Hant\WindowsBase.resources.dll
 C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\zh-Hant\WindowsFormsIntegration.resources.dll
+C:\Users\vajdazb\source\repos\MicLevelMonitor\bin\Release\net8.0-windows\win-x64\mscordaccore_amd64_amd64_8.0.1825.31117.dll
+C:\Users\vajdazb\source\repos\MicLevelMonitor\obj\Release\net8.0-windows\win-x64\MicLevelMonitor.sourcelink.json

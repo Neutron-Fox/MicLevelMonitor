@@ -13,10 +13,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("MicLevelMonitor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
+[assembly: System.Reflection.AssemblyCopyrightAttribute("© 2024 MicLevelMonitor. Minden jog fenntartva.")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ba1f0af554b12472e98f51f881b85e4ed2e8b91a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8262eba470686f53c014e933a17c0f74e29c8a9d")]
 [assembly: System.Reflection.AssemblyProductAttribute("MicLevelMonitor")]
-[assembly: System.Reflection.AssemblyTitleAttribute("MicLevelMonitor")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Mikrofon Monitor (Integrált)")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]

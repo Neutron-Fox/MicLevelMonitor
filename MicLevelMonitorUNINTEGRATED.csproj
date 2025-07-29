@@ -8,30 +8,40 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     
-    <!-- Ikon be√°ll√≠t√°s -->
+    <!-- Alkalmaz·s ikon -->
     <ApplicationIcon>parancsikon.ico</ApplicationIcon>
     
-    <!-- Framework f√ºgg≈ë publish -->
+    <!-- FRAMEWORK F‹GG’ verziÛ - .NET runtime k¸lˆn kell -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     
-    <!-- Teljes√≠tm√©ny optimaliz√°l√°s -->
+    <!-- Optimaliz·l·s -->
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
+    <PublishTrimmed>false</PublishTrimmed>
     
-    <!-- Assembly inform√°ci√≥k -->
-    <AssemblyTitle>Mikrofon Monitor (Framework f√ºgg≈ë)</AssemblyTitle>
-    <AssemblyDescription>Mikrofon hanger≈ë figyel≈ë Windows t√°lca alkalmaz√°s - .NET 8 framework f√ºgg≈ë verzi√≥</AssemblyDescription>
+    <!-- Assembly metaadatok -->
+    <AssemblyTitle>Mikrofon Monitor (Framework f¸ggı)</AssemblyTitle>
+    <AssemblyDescription>Mikrofon hangerı figyelı Windows t·lca alkalmaz·s - .NET 8 framework f¸ggı verziÛ</AssemblyDescription>
+    <AssemblyCompany>MicLevelMonitor</AssemblyCompany>
+    <AssemblyProduct>Mikrofon Monitor</AssemblyProduct>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Copyright>2024</Copyright>
+    <Copyright>© 2024 MicLevelMonitor. Minden jog fenntartva.</Copyright>
   </PropertyGroup>
 
-  <!-- Dependency optimaliz√°l√°s -->
+  <!-- NuGet csomagok -->
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+  <!-- Ikon f·jl -->
+  <ItemGroup>
+    <Content Include="parancsikon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

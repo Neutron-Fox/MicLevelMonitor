@@ -371,4 +371,13 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+# Visual Studio User Files
 *.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files for this project
+*.csproj.user
+*.vbproj.user
+*.vcxproj.user
+*.vcproj.user

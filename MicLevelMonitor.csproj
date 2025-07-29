@@ -13,6 +13,7 @@
     <ApplicationIcon>parancsikon.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Configurations>Release</Configurations>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="parancsikon.ico" />

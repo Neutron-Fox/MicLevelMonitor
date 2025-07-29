@@ -10,7 +10,17 @@
     <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <ApplicationIcon>parancsikon.ico</ApplicationIcon>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="parancsikon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MicLevelMonitorINTEGRATED.csproj" />
+    <None Include="MicLevelMonitorUNINTEGRATED.csproj" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>

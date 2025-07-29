@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- Ikon beállítás -->
+    <ApplicationIcon>parancsikon.ico</ApplicationIcon>
+    
+    <!-- Framework függő publish -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    
+    <!-- Teljesítmény optimalizálás -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <Optimize>true</Optimize>
+    
+    <!-- Assembly információk -->
+    <AssemblyTitle>Mikrofon Monitor (Framework függő)</AssemblyTitle>
+    <AssemblyDescription>Mikrofon hangerő figyelő Windows tálca alkalmazás - .NET 8 framework függő verzió</AssemblyDescription>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Copyright>2024</Copyright>
+  </PropertyGroup>
+
+  <!-- Dependency optimalizálás -->
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+</Project>

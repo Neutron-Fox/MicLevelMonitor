@@ -165,6 +165,7 @@ DocProject/Help/html
 
 # Click-Once directory
 publish/
+[Pp]roperties/
 
 # Publish Web Output
 *.[Pp]ublish.xml
@@ -370,6 +371,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-*.csproj.user
-
-[Pp]roperties/
+*.user

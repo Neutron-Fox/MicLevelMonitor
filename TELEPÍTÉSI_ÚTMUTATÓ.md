@@ -70,4 +70,4 @@ Vagy:
 
 ## Támogatás
 
-Technikai problémák esetén forduljon a rendszergazdához vagy a fejlesztõcsapathoz.
+Technikai problémák esetén forduljon a rendszergazdához vagy a fejlesztõhöz.

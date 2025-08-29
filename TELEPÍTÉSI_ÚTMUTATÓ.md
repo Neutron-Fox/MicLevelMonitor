@@ -30,10 +30,13 @@ A `Setup-MicLevelMonitor.bat` és a `Deploy-MicLevelMonitor.ps1` scriptek az aláb
    - Elhelyezi a parancsikont a publikus indítási mappában (`C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp`)
    - Ezzel biztosítja, hogy az alkalmazás minden felhasználó számára automatikusan elinduljon rendszerindításkor
 
-2. **Rendszertálca beállítások konfigurálása**:
-   - Beállítja a Windows 11 értesítési területének konfigurációját
+2. **Rendszertálca beállítások konfigurálása az összes felhasználó számára**:
+   - Beállítja a Windows 11 értesítési területének konfigurációját a jelenlegi felhasználó számára
    - Az alkalmazás rendszertálca ikonját mindig láthatóvá teszi
    - Ez megakadályozza, hogy az ikon a "rejtett ikonok" közé kerüljön
+   - Konfigurálja az alapértelmezett felhasználói profilt, hogy minden új felhasználó megfelelõ beállításokkal kezdjen
+   - Frissíti a már létezõ felhasználói profilokat a rendszeren
+   - Létrehoz egy ütemezett feladatot, amely bejelentkezéskor automatikusan beállítja az ikont láthatóvá minden új felhasználó számára
 
 3. **Biztonsági megoldás alkalmazása**:
    - Létrehoz egy útmutató szöveges fájlt arra az esetre, ha az automatikus beállítás nem mûködne
@@ -44,8 +47,9 @@ A `Setup-MicLevelMonitor.bat` és a `Deploy-MicLevelMonitor.ps1` scriptek az aláb
 A telepítés után ellenõrizze az alábbiakat:
 
 1. A MicLevelMonitor alkalmazás megfelelõen elindult-e
-2. A rendszertálcán látható-e az alkalmazás ikonja
+2. A rendszertálcán látható-e az alkalmazás ikonja minden felhasználó számára
 3. A `C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp` mappában megtalálható-e a MicLevelMonitor parancsikonja
+4. Létrejött-e a "Configure-MicLevelMonitor-ForNewUser" nevû ütemezett feladat a rendszeren
 
 ## Manuális beállítás (ha szükséges)
 
@@ -67,6 +71,7 @@ Vagy:
 - **Az alkalmazás nem indul el automatikusan**: Ellenõrizze, hogy a parancsikon létezik-e a Startup mappában és a hivatkozás helyes-e
 - **Az alkalmazás ikonja nem látható**: Kövesse a manuális beállítási útmutatót
 - **Az alkalmazás fut, de nem jelenik meg az ikon**: Indítsa újra a Windows Explorer folyamatot vagy indítsa újra a számítógépet
+- **Új felhasználó számára nem látható az ikon**: Ellenõrizze, hogy a "Configure-MicLevelMonitor-ForNewUser" nevû ütemezett feladat létezik-e és engedélyezve van-e
 
 ## Támogatás
 

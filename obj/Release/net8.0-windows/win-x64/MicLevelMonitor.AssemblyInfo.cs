@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("© 2024 MicLevelMonitor. Minden jog fenntartva.")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+75ef9a3b0189647c054a0a82344a6b8f763dda18")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7ba23ec68581a63cde3e85dcf9c45adcc89f7f4")]
 [assembly: System.Reflection.AssemblyProductAttribute("MicLevelMonitor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Mikrofon Monitor (Integrált)")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

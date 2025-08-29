@@ -1,14 +1,7 @@
 # Script to deploy MicLevelMonitor
 # This script will:
 # 1. Create a shortcut in the Public startup folder
-# 2. Configure Windows 11 to always show the MicLevelMonitor icon in the notification area for all users
-# 3. Optimize for SCCM deployment
-
-# Run with administrative privileges
-if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Warning "Ez a script adminisztrátori jogosultságokat igényel! Kérem, futtassa rendszergazdaként."
-    Exit 1
-}
+# 2. Configure Windows 11 to show the MicLevelMonitor icon in the notification area for all users
 
 # Configuration
 $appName = "MicLevelMonitor"
@@ -28,23 +21,10 @@ Write-Host "Running on: $env:COMPUTERNAME as $env:USERNAME" -ForegroundColor Cya
 Write-Host "Source folder: $sourceFolder" -ForegroundColor Cyan
 Write-Host "Executable path: $exePath" -ForegroundColor Cyan
 
-# Check if running via SCCM
-$isSCCM = $false
-if (Get-Process -Name "CcmExec" -ErrorAction SilentlyContinue) {
-    $isSCCM = $true
-    Write-Host "Detected SCCM client running - executing in SCCM context" -ForegroundColor Cyan
-}
-
 # Check if the application exists in the source folder
 if (-not (Test-Path -Path $exePath)) {
     Write-Error "Az alkalmazás végrehajtható fájlja nem található: $exePath"
-    
-    # If we're in SCCM context, create the directory and indicate a failure that SCCM can detect
-    if ($isSCCM) {
-        New-Item -Path $sourceFolder -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-        "APPLICATION_NOT_FOUND" | Out-File -FilePath (Join-Path -Path $sourceFolder -ChildPath "DEPLOYMENT_FAILED.txt") -Force
-    }
-    
+    "APPLICATION_NOT_FOUND" | Out-File -FilePath (Join-Path -Path $sourceFolder -ChildPath "DEPLOYMENT_FAILED.txt") -Force
     Stop-Transcript
     Exit 1
 }
@@ -89,39 +69,7 @@ if (-not (Test-Path -Path $startupFolder)) {
 Write-Host "`nIndítási parancsikon létrehozása a következõhöz: $appName..." -ForegroundColor Cyan
 $shortcutCreated = Create-Shortcut -TargetPath $exePath -ShortcutPath $shortcutPath -Description "$appName - Mikrofon szintjelzõ"
 
-# Configure system tray icon to always be visible for current user
-Write-Host "`nRendszertálca ikon konfigurálása az aktuális felhasználó számára..." -ForegroundColor Cyan
-
-# Define registry paths
-$explorerRegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
-$notificationAreaPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\NotificationAreaCustomization"
-
-# Configure Windows 11 to show all notification icons for current user
-try {
-    if (-not (Test-Path $explorerRegPath)) {
-        New-Item -Path $explorerRegPath -Force | Out-Null
-    }
-
-    $enableAutoTray = Get-ItemProperty -Path $explorerRegPath -Name "EnableAutoTray" -ErrorAction SilentlyContinue
-
-    if ($null -eq $enableAutoTray) {
-        New-ItemProperty -Path $explorerRegPath -Name "EnableAutoTray" -Value 0 -PropertyType DWord -Force | Out-Null
-    } else {
-        Set-ItemProperty -Path $explorerRegPath -Name "EnableAutoTray" -Value 0 -Type DWord -Force | Out-Null
-    }
-    
-    # Make sure notification area customization path exists
-    if (-not (Test-Path $notificationAreaPath)) {
-        New-Item -Path $notificationAreaPath -Force | Out-Null
-    }
-    
-    Write-Host "Az aktuális felhasználó rendszertálca beállításai sikeresen frissítve" -ForegroundColor Green
-}
-catch {
-    Write-Error "Hiba történt az aktuális felhasználó rendszertálca beállításainak frissítése során: $_"
-}
-
-# First, run the app to make it register in the system tray if it's not running already
+# First, start the application to register it in the system tray
 if (-not (Get-Process -Name $appName -ErrorAction SilentlyContinue)) {
     Write-Host "`n$appName indítása a rendszertálcában való regisztráláshoz..." -ForegroundColor Cyan
     try {
@@ -134,51 +82,110 @@ if (-not (Get-Process -Name $appName -ErrorAction SilentlyContinue)) {
     }
 }
 
-# Create a more robust scheduled task for new users
+# Configure notification area settings for the MicLevelMonitor app for current user
+Write-Host "`nRendszertálca ikon beállítása az aktuális felhasználó számára..." -ForegroundColor Cyan
+
+# Define registry paths
+$notificationAreaPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\NotificationAreaCustomization"
+
+try {
+    # Create notification area customization key if it doesn't exist
+    if (-not (Test-Path $notificationAreaPath)) {
+        New-Item -Path $notificationAreaPath -Force | Out-Null
+    }
+    
+    # Wait for the application to register in the notification area
+    Start-Sleep -Seconds 3
+    
+    # Check if the app has registered in the notification area
+    $appIconFound = $false
+    $registeredIcons = Get-ChildItem -Path $notificationAreaPath -ErrorAction SilentlyContinue | 
+                        Where-Object { $_.PSChildName -notmatch "IconStreams|PastIconsStream" }
+    
+    foreach ($icon in $registeredIcons) {
+        $iconPath = Get-ItemProperty -Path $icon.PSPath -Name "IconPath" -ErrorAction SilentlyContinue
+        if ($iconPath -and $iconPath.IconPath -match $appName) {
+            Write-Host "  MicLevelMonitor ikon megtalálva, láthatóvá tétele..." -ForegroundColor Yellow
+            Set-ItemProperty -Path $icon.PSPath -Name "IsVisible" -Value 1 -Type DWord -Force
+            $appIconFound = $true
+        }
+    }
+    
+    if (-not $appIconFound) {
+        Write-Warning "  Az alkalmazás ikonja nem található a rendszertálcán. Próbálja újraindítani az alkalmazást."
+    }
+    
+    Write-Host "Az aktuális felhasználó rendszertálca beállításai sikeresen frissítve" -ForegroundColor Green
+}
+catch {
+    Write-Error "Hiba történt az aktuális felhasználó rendszertálca beállításainak frissítése során: $_"
+}
+
+# Create a scheduled task script for configuring the notification icon for new users
 Write-Host "`nÜtemezett feladat létrehozása az új felhasználók számára..." -ForegroundColor Cyan
 $taskName = "Configure-MicLevelMonitor-ForNewUser"
 
-# Define a more comprehensive PowerShell script for the task
 $taskScript = @"
-# Configure notification area settings for MicLevelMonitor
-`$explorerRegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
-`$notificationAreaPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\NotificationAreaCustomization"
-
-# Ensure the Explorer key exists
-if (-not (Test-Path `$explorerRegPath)) {
-    New-Item -Path `$explorerRegPath -Force | Out-Null
-}
-
-# Disable auto-hide for system tray icons
-if (Get-ItemProperty -Path `$explorerRegPath -Name "EnableAutoTray" -ErrorAction SilentlyContinue) {
-    Set-ItemProperty -Path `$explorerRegPath -Name "EnableAutoTray" -Value 0 -Type DWord -Force
-} else {
-    New-ItemProperty -Path `$explorerRegPath -Name "EnableAutoTray" -Value 0 -PropertyType DWord -Force
-}
-
-# Create notification area customization key if it doesn't exist
-if (-not (Test-Path `$notificationAreaPath)) {
-    New-Item -Path `$notificationAreaPath -Force | Out-Null
-}
-
-# Also create specific settings for the MicLevelMonitor icon if it exists
-`$iconGuid = `$null
-Get-ChildItem -Path `$notificationAreaPath -ErrorAction SilentlyContinue | ForEach-Object {
-    if (`$_.PSChildName -ne "IconStreams" -and `$_.PSChildName -ne "PastIconsStream") {
-        `$iconPath = Get-ItemProperty -Path `$_.PSPath -Name "IconPath" -ErrorAction SilentlyContinue
-        if (`$iconPath -and `$iconPath.IconPath -like "*MicLevelMonitor*") {
-            Set-ItemProperty -Path `$_.PSPath -Name "IsVisible" -Value 1 -Type DWord -Force
+# Script to configure MicLevelMonitor icon visibility in notification area
+try {
+    # Wait for Explorer to fully initialize
+    Start-Sleep -Seconds 5
+    
+    # Start the MicLevelMonitor application if it's not running
+    \$appPath = "$exePath"
+    if (-not (Get-Process -Name "MicLevelMonitor" -ErrorAction SilentlyContinue)) {
+        Start-Process -FilePath \$appPath
+        Start-Sleep -Seconds 5
+    }
+    
+    # Set the MicLevelMonitor icon to be visible
+    \$notificationAreaPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\NotificationAreaCustomization"
+    if (-not (Test-Path \$notificationAreaPath)) {
+        New-Item -Path \$notificationAreaPath -Force | Out-Null
+    }
+    
+    # Check all icon entries
+    \$iconFound = \$false
+    \$registeredIcons = Get-ChildItem -Path \$notificationAreaPath -ErrorAction SilentlyContinue | 
+                        Where-Object { \$_.PSChildName -notmatch "IconStreams|PastIconsStream" }
+    
+    foreach (\$icon in \$registeredIcons) {
+        \$iconPath = Get-ItemProperty -Path \$icon.PSPath -Name "IconPath" -ErrorAction SilentlyContinue
+        if (\$iconPath -and \$iconPath.IconPath -match "MicLevelMonitor") {
+            Set-ItemProperty -Path \$icon.PSPath -Name "IsVisible" -Value 1 -Type DWord -Force
+            \$iconFound = \$true
         }
     }
+    
+    # If the icon wasn't found, try again after a delay
+    if (-not \$iconFound) {
+        Start-Sleep -Seconds 10
+        \$registeredIcons = Get-ChildItem -Path \$notificationAreaPath -ErrorAction SilentlyContinue | 
+                            Where-Object { \$_.PSChildName -notmatch "IconStreams|PastIconsStream" }
+        
+        foreach (\$icon in \$registeredIcons) {
+            \$iconPath = Get-ItemProperty -Path \$icon.PSPath -Name "IconPath" -ErrorAction SilentlyContinue
+            if (\$iconPath -and \$iconPath.IconPath -match "MicLevelMonitor") {
+                Set-ItemProperty -Path \$icon.PSPath -Name "IsVisible" -Value 1 -Type DWord -Force
+                \$iconFound = \$true
+            }
+        }
+    }
+    
+    # Refresh Explorer to apply changes
+    if (\$iconFound) {
+        Stop-Process -Name "explorer" -Force -ErrorAction SilentlyContinue
+        Start-Process "explorer.exe"
+    }
+} catch {
+    # Error handling
+    \$errorMessage = "Error configuring MicLevelMonitor icon: \$_"
+    \$errorMessage | Out-File -FilePath "$sourceFolder\\NotificationIconError.log" -Append
 }
-
-# Refresh Explorer to apply changes immediately
-Stop-Process -Name "explorer" -Force -ErrorAction SilentlyContinue
-Start-Process "explorer.exe"
 "@
 
 # Save the script to a file
-$scriptPath = Join-Path -Path $sourceFolder -ChildPath "ConfigureNotificationArea.ps1"
+$scriptPath = Join-Path -Path $sourceFolder -ChildPath "ConfigureNotificationIcon.ps1"
 $taskScript | Out-File -FilePath $scriptPath -Encoding UTF8 -Force
 
 # Create the scheduled task XML
@@ -243,7 +250,7 @@ catch {
     Write-Error "Hiba történt az ütemezett feladat létrehozása során: $_"
 }
 
-# Configure the Default User profile (for all future users)
+# Configure the Default User profile for future new users
 Write-Host "`nAlapértelmezett felhasználói profil konfigurálása (minden jövõbeli felhasználó számára)..." -ForegroundColor Cyan
 
 try {
@@ -252,16 +259,13 @@ try {
         $process = Start-Process -FilePath "reg.exe" -ArgumentList "load HKU\DefaultUser `"$defaultUserRegistryPath`"" -PassThru -Wait -WindowStyle Hidden
         
         if ($process.ExitCode -eq 0) {
-            # Set EnableAutoTray to 0 in default user profile
-            Start-Process -FilePath "reg.exe" -ArgumentList "add `"HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer`" /v EnableAutoTray /t REG_DWORD /d 0 /f" -PassThru -Wait -WindowStyle Hidden | Out-Null
-            
             # Create the notification area customization key
             Start-Process -FilePath "reg.exe" -ArgumentList "add `"HKU\DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\NotificationAreaCustomization`"" -PassThru -Wait -WindowStyle Hidden | Out-Null
             
             # Unload the hive
             Start-Process -FilePath "reg.exe" -ArgumentList "unload HKU\DefaultUser" -PassThru -Wait -WindowStyle Hidden | Out-Null
             
-            Write-Host "Az alapértelmezett felhasználói profil sikeresen konfigurálva az összes értesítési ikon megjelenítésére" -ForegroundColor Green
+            Write-Host "Az alapértelmezett felhasználói profil sikeresen elõkészítve a MicLevelMonitor ikon számára" -ForegroundColor Green
         }
         else {
             Write-Warning "Nem sikerült betölteni az alapértelmezett felhasználói registry hive-ot. Kilépési kód: $($process.ExitCode)"
@@ -275,68 +279,12 @@ catch {
     Write-Error "Hiba történt az alapértelmezett felhasználói profil konfigurálása során: $_"
 }
 
-# Configure all existing user profiles
-Write-Host "`nMinden létezõ felhasználói profil konfigurálása..." -ForegroundColor Cyan
-
-try {
-    # Get all user profiles except Default and Public
-    $userProfiles = Get-ChildItem -Path "C:\Users" -Directory | Where-Object { $_.Name -ne "Default" -and $_.Name -ne "Public" -and $_.Name -ne "All Users" -and $_.Name -ne "Default User" }
-    
-    foreach ($profile in $userProfiles) {
-        $ntUserDatPath = Join-Path -Path $profile.FullName -ChildPath "NTUSER.DAT"
-        
-        if (Test-Path $ntUserDatPath) {
-            Write-Host "Felhasználói profil feldolgozása: $($profile.Name)" -ForegroundColor Yellow
-            
-            try {
-                # Check if the user is currently logged in
-                $isUserLoggedIn = $false
-                $loggedInUsers = Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty UserName
-                if ($loggedInUsers -like "*\$($profile.Name)") {
-                    $isUserLoggedIn = $true
-                    Write-Host "  A felhasználó jelenleg be van jelentkezve - registry közvetlenül nem módosítható" -ForegroundColor Yellow
-                    continue
-                }
-                
-                # Load user hive
-                $hiveKey = "HKU\TempUser_$($profile.Name)"
-                $process = Start-Process -FilePath "reg.exe" -ArgumentList "load `"$hiveKey`" `"$ntUserDatPath`"" -PassThru -Wait -WindowStyle Hidden
-                
-                if ($process.ExitCode -eq 0) {
-                    # Set EnableAutoTray to 0
-                    Start-Process -FilePath "reg.exe" -ArgumentList "add `"$hiveKey\Software\Microsoft\Windows\CurrentVersion\Explorer`" /v EnableAutoTray /t REG_DWORD /d 0 /f" -PassThru -Wait -WindowStyle Hidden | Out-Null
-                    
-                    # Create the notification area customization key
-                    Start-Process -FilePath "reg.exe" -ArgumentList "add `"$hiveKey\Software\Microsoft\Windows\CurrentVersion\Explorer\NotificationAreaCustomization`"" -PassThru -Wait -WindowStyle Hidden | Out-Null
-                    
-                    # Unload the hive
-                    Start-Process -FilePath "reg.exe" -ArgumentList "unload `"$hiveKey`"" -PassThru -Wait -WindowStyle Hidden | Out-Null
-                    
-                    Write-Host "  A profil sikeresen konfigurálva: $($profile.Name)" -ForegroundColor Green
-                }
-                else {
-                    Write-Warning "  Nem sikerült betölteni a felhasználói registry hive-ot: $($profile.Name). Kilépési kód: $($process.ExitCode)"
-                }
-            }
-            catch {
-                Write-Warning "  Hiba történt a profil konfigurálása során: $($profile.Name): $_"
-            }
-        }
-        else {
-            Write-Warning "  NTUSER.DAT nem található a következõ felhasználói profilhoz: $($profile.Name)"
-        }
-    }
-}
-catch {
-    Write-Error "Hiba történt a felhasználói profilok feldolgozása során: $_"
-}
-
 # Create instructions for manual configuration if automatic fails
 Write-Host "`nManuális konfigurációs útmutató létrehozása..." -ForegroundColor Cyan
 
 $instructionsPath = Join-Path -Path $sourceFolder -ChildPath "ConfigureSystemTray.txt"
 @"
-Ha az ikon nem lenne látható a tálcán, kövesse az alábbi lépéseket:
+Ha a MicLevelMonitor ikon nem lenne látható a tálcán, kövesse az alábbi lépéseket:
 
 1. Kattintson a Windows tálcán a felfelé mutató nyílra (^)
 2. Kattintson a "Testreszabás" gombra
@@ -369,8 +317,9 @@ Application Path: $exePath
 "@ | Out-File -FilePath (Join-Path -Path $sourceFolder -ChildPath "DEPLOYMENT_SUCCESS.txt") -Encoding UTF8
 
 Write-Host "`nTelepítés befejezve!" -ForegroundColor Green
-Write-Host "Az alkalmazás hozzáadva az indítási mappához és konfigurálva, hogy mindig látható legyen a rendszertálcán." -ForegroundColor Green
-Write-Host "Egy ütemezett feladat lett létrehozva a rendszertálca beállítások konfigurálásához az új felhasználóknál bejelentkezéskor." -ForegroundColor Green
+Write-Host "Az alkalmazás hozzáadva az indítási mappához" -ForegroundColor Green
+Write-Host "A MicLevelMonitor ikonnak láthatónak kell lennie a rendszertálcán minden felhasználó számára" -ForegroundColor Green
+Write-Host "Egy ütemezett feladat lett létrehozva a rendszertálca beállítások konfigurálásához az új felhasználóknál bejelentkezéskor" -ForegroundColor Green
 Write-Host "Ha a rendszertálca ikon továbbra sem látható, a manuális utasítások a következõ helyen érhetõek el: $instructionsPath" -ForegroundColor Yellow
 
 Stop-Transcript

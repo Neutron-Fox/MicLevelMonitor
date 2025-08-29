@@ -6,37 +6,34 @@ Ez a dokumentáció segít a MicLevelMonitor alkalmazás SCCM-en keresztüli telepíté
 
 - **MicLevelMonitor alkalmazás** - Az alkalmazás fõ exe fájlja és a szükséges függõségek
 - **Deploy-MicLevelMonitor.ps1** - PowerShell script az alkalmazás konfigurálásához
-- **Setup-MicLevelMonitor.bat** - Batch fájl a PowerShell script adminisztrátori jogosultsággal való futtatásához
 - **TELEPÍTÉSI_ÚTMUTATÓ.md** - Ez a telepítési útmutató
 
 ## SCCM telepítési lépések
 
 1. Készítsen egy SCCM telepítési csomagot, amely az alábbi tartalmakkal rendelkezik:
    - Az alkalmazás teljes mappája
-   - A telepítõ scriptek (Deploy-MicLevelMonitor.ps1 és Setup-MicLevelMonitor.bat)
+   - A Deploy-MicLevelMonitor.ps1 PowerShell script
    - Ez az útmutató
 
 2. Az SCCM deployment során állítsa be az alábbi telepítési paramétereket:
    - **Telepítési mappa**: `C:\Nyílt dokumentumok\MicLevelMonitor`
-   - **Futtatandó program**: `Setup-MicLevelMonitor.bat`
-   - **Futtatás módja**: Adminisztrátori jogosultsággal
+   - **Futtatandó program**: `powershell.exe -ExecutionPolicy Bypass -File "Deploy-MicLevelMonitor.ps1"`
 
 ## Mit tesz a telepítõ script?
 
-A `Setup-MicLevelMonitor.bat` és a `Deploy-MicLevelMonitor.ps1` scriptek az alábbi mûveleteket hajtják végre:
+A `Deploy-MicLevelMonitor.ps1` script az alábbi mûveleteket hajtja végre:
 
 1. **Indítási parancsikon létrehozása**:
    - Létrehoz egy parancsikont a MicLevelMonitor.exe alkalmazáshoz
    - Elhelyezi a parancsikont a publikus indítási mappában (`C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp`)
    - Ezzel biztosítja, hogy az alkalmazás minden felhasználó számára automatikusan elinduljon rendszerindításkor
 
-2. **Rendszertálca beállítások konfigurálása az összes felhasználó számára**:
-   - Beállítja a Windows 11 értesítési területének konfigurációját a jelenlegi felhasználó számára
-   - Az alkalmazás rendszertálca ikonját mindig láthatóvá teszi
-   - Ez megakadályozza, hogy az ikon a "rejtett ikonok" közé kerüljön
-   - Konfigurálja az alapértelmezett felhasználói profilt, hogy minden új felhasználó megfelelõ beállításokkal kezdjen
-   - Frissíti a már létezõ felhasználói profilokat a rendszeren
-   - Létrehoz egy ütemezett feladatot, amely bejelentkezéskor automatikusan beállítja az ikont láthatóvá minden új felhasználó számára
+2. **A MicLevelMonitor ikon megjelenítésének biztosítása a rendszertálcán**:
+   - Elindítja az alkalmazást, hogy regisztrálja magát a rendszertálcán
+   - Megkeresi a MicLevelMonitor ikont a rendszertálca beállításokban
+   - Beállítja a MicLevelMonitor ikont "látható" állapotúra a jelenlegi felhasználó számára
+   - Elõkészíti az alapértelmezett felhasználói profilt, hogy az új felhasználók számára is látható legyen az ikon
+   - Létrehoz egy ütemezett feladatot, amely bejelentkezéskor ellenõrzi és biztosítja, hogy a MicLevelMonitor ikon látható legyen
 
 3. **Biztonsági megoldás alkalmazása**:
    - Létrehoz egy útmutató szöveges fájlt arra az esetre, ha az automatikus beállítás nem mûködne
@@ -75,4 +72,4 @@ Vagy:
 
 ## Támogatás
 
-Technikai problémák esetén forduljon a rendszergazdához vagy a fejlesztõhöz.
+Technikai problémák esetén forduljon a rendszergazdához vagy a fejlesztõhöz

@@ -5,7 +5,7 @@
 
 # Configuration
 $appName = "MicLevelMonitor"
-$sourceFolder = "$env:SystemDrive\Nyílt dokumentumok\$appName"
+$sourceFolder = "$env:SystemDrive\Public\$appName"
 $exePath = Join-Path -Path $sourceFolder -ChildPath "$appName.exe"
 $startupFolder = "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs\StartUp"
 $shortcutPath = Join-Path -Path $startupFolder -ChildPath "$appName.lnk"
